@@ -33,9 +33,7 @@ class Solution(object):
         return max_length
 
 # 时间复杂度:O(N),N为数组nums的长度
-# 空间复杂度:O(K),K为滑动窗口的大小
-
-      
+# 空间复杂度:O(K),K为滑动窗口的大小  
 # @lc code=end
 # 暴力枚举法:直接列举所有可能的滑动窗口，计算其最大值
 # 时间复杂度:O(N*K),N为数组nums的长度,K为滑动窗口的大小
