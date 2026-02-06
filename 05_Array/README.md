@@ -1,334 +1,435 @@
-LeetCode 每日三题解题笔记
-
-本文档总结今日完成的三道 LeetCode 题目，每道题包含 题目核心、解题逻辑（必要时附数学证明）、核心代码、复杂度分析，格式清晰，便于复盘回顾。
-
-题目一：53. 最大子数组和（Maximum Subarray）
-
-1. 题目核心
-
-给定一个整数数组 nums，找到一个具有最大和的连续子数组（子数组最少包含一个元素），返回其最大和。
-
-2. 解题逻辑
-
-本题有两种核心解法：暴力枚举法（直观但低效）、Kadane 算法（最优解，动态规划思想），重点掌握 Kadane 算法。
-
-方法一：暴力枚举法
-
-核心思路：枚举所有可能的子数组（通过两层循环，外层控制子数组起始索引，内层控制结束索引），计算每个子数组的和，记录最大值。
-
-局限性：重复计算子数组和，时间复杂度极高，无法通过大数据测试用例，仅用于理解问题本质。
-
-方法二：Kadane 算法（最优解）
-
-核心思想：利用动态规划，定义子问题，避免重复计算，仅需一次遍历即可找到最大和。
-
-关键定义与数学证明
-
-设数组为 \( A[0], A[1], \dots, A[n-1] \)，定义：
-
-- \( S[i] \)：以 \( A[i] \) 结尾的所有子数组中，和最大的子数组的和（即算法中的 current_max）。
-
-需证明：\( S[i] = \max\left(A[i], S[i-1] + A[i]\right) \)
-
-证明：
-
-1. 引理：以 \( A[i] \) 结尾的任意子数组，均可表示为 \( A[k] + A[k+1] + \dots + A[i] \)（其中 \( 0 \le k \le i \)）。
-
-2. 分两类讨论：
-        
-
-  - 当 \( k = i \)：子数组仅包含 \( A[i] \)，和为 \( A[i] \)。
-
-  - 当 \( k \le i-1 \)：子数组包含 \( A[i] \) 和以 \( A[i-1] \) 结尾的子数组，和为 \( (A[k] + \dots + A[i-1]) + A[i] \)。设 \( T = A[k] + \dots + A[i-1] \)，则 \( T \le S[i-1] \)（因 \( S[i-1] \) 是以 \( A[i-1] \) 结尾的最大子数组和），故该类子数组的最大和为 \( S[i-1] + A[i] \)。
-
-3. 综合两类情况，以 \( A[i] \) 结尾的最大子数组和为 \( \max\left(A[i], S[i-1] + A[i]\right) \)，证毕。
-
-算法步骤：
-
-1. 初始化 current_max（当前结尾最大和）和 global_max（全局最大和）为数组第一个元素。
-
-2. 从第二个元素开始遍历，每一步更新 current_max 为 \( \max(num, current_max + num) \)。
-
-3. 同步更新 global_max 为 current_max 和自身的最大值，遍历结束后返回 global_max。
-
-3. 核心代码
-
-暴力枚举法（参考代码）
-
-class Solution(object):
-    def maxSubArray(self, nums):
-        """
-        :type nums: List[int]
-        :rtype: int
-        """
-        n = len(nums)
-        if n == 1:
-            return nums[0]
-        max_sum = -1e9
-        for i in range(n):
-            total_sum = 0
-            for j in range(i, n):
-                total_sum += nums[j]
-                max_sum = max(max_sum, total_sum)
-        return max_sum
-
-Kadane 算法（最优代码）
-
-class Solution(object):
-    def maxSubArray(self, nums):
-        """
-        :type nums: List[int]
-        :rtype: int
-        """
-        if not nums:
-            return 0
-        # 初始化当前结尾最大和、全局最大和
-        current_max = global_max = nums[0]
-        # 从第二个元素开始遍历
-        for num in nums[1:]:
-            current_max = max(num, current_max + num)
-            global_max = max(global_max, current_max)
-        return global_max
-
-4. 复杂度分析
-
-解法
-
-时间复杂度
-
-空间复杂度
-
-说明
-
-暴力枚举法
-
-O(n²)
-
-O(1)
-
-两层嵌套循环，枚举所有子数组，低效
-
-Kadane 算法
-
-O(n)
-
-O(1)
-
-一次遍历，常数级额外空间，最优解
-
-题目二：189. 轮转数组（Rotate Array）
-
-1. 题目核心
-
-给定一个整数数组 nums，将数组中的元素向右轮转 k 个位置，要求 原地修改 数组（不返回任何值，直接修改输入数组）。
-
-2. 解题逻辑
-
-本题有三种常见解法，重点掌握三次反转法（最优解，原地修改且空间最优）。
-
-方法一：辅助数组法（直观易懂）
-
-核心思路：创建一个与原数组长度相同的辅助数组，将原数组每个元素放到轮转后的正确位置，再通过切片赋值将辅助数组内容覆盖原数组（实现原地修改）。
-
-关键细节：\( k = k \% n \)（处理 k 大于数组长度的情况，避免无效轮转），轮转后位置公式为 \( (i + k) \% n \)（i 为原索引）。
-
-方法二：三次反转法（最优解）
-
-核心思路：数组向右轮转 k 位，等价于将数组末尾 k 个元素移到开头，通过三次反转实现原地修改，无需额外空间。
-
-反转步骤：
-
-1. 反转整个数组：将末尾 k 个元素移到开头（但顺序反转）。
-
-2. 反转前 k 个元素：恢复末尾 k 个元素的正确顺序。
-
-3. 反转后 n-k 个元素：恢复剩余元素的正确顺序。
-
-示例演示（nums = [1,2,3,4,5,6,7], k=3）：
-
-1. 反转整个数组 → [7,6,5,4,3,2,1]
-
-2. 反转前 3 个元素 → [5,6,7,4,3,2,1]
-
-3. 反转后 4 个元素 → [5,6,7,1,2,3,4]（正确结果）
-
-方法三：暴力旋转法（低效，不推荐）
-
-核心思路：每次将数组向右轮转 1 位，重复 k 次。每次轮转需将最后一个元素移到开头，其余元素后移。
-
-局限性：时间复杂度极高，k 较大时会超时，仅作思路参考。
-
-3. 核心代码
-
-辅助数组法（参考代码）
-
-class Solution(object):
-    def rotate(self, nums, k):
-        """
-        :type nums: List[int]
-        :type k: int
-        :rtype: None Do not return anything, modify nums in-place instead.
-        """
-        n = len(nums)
-        k = k % n  # 处理k大于数组长度的情况
-        copyed_nums = [0] * n
-        # 赋值到正确位置
-        for i in range(n):
-            copyed_nums[(i + k) % n] = nums[i]
-        # 切片赋值，实现原地修改
-        nums[:] = copyed_nums
-
-三次反转法（最优代码）
-
-class Solution(object):
-    def rotate(self, nums, k):
-        """
-        :type nums: List[int]
-        :type k: int
-        :rtype: None Do not return anything, modify nums in-place instead.
-        """
-        n = len(nums)
-        k = k % n  # 关键：避免无效轮转
-        
-        # 定义原地反转函数（复用）
-        def reverse(left, right):
-            while left < right:
-                nums[left], nums[right] = nums[right], nums[left]
-                left += 1
-                right -= 1
-        
-        # 三次反转核心步骤
-        reverse(0, n - 1)    # 1. 反转整个数组
-        reverse(0, k - 1)    # 2. 反转前k个元素
-        reverse(k, n - 1)    # 3. 反转后n-k个元素
-
-4. 复杂度分析
-
-解法
-
-时间复杂度
-
-空间复杂度
-
-说明
-
-辅助数组法
-
-O(n)
-
-O(n)
-
-直观易懂，需额外空间存储辅助数组
-
-三次反转法
-
-O(n)
-
-O(1)
-
-原地修改，无额外空间，最优解
-
-暴力旋转法
-
-O(n*k)
-
-O(1)
-
-低效，k 较大时超时，不推荐
-
-题目三：Python 列表 sort() 方法详解（关联排序类题目）
-
-1. 核心说明
-
-虽然不是 LeetCode 编程题，但 sort() 方法是 Python 中排序的核心工具，高频用于各类排序相关题目（如数组排序、自定义排序），此处详细总结其用法、参数及特性，适配解题需求。
-
-2. sort() 方法核心细节
-
-2.1 基本语法
-
-sort() 是 Python 列表的内置方法，用于 原地排序 列表，无返回值（返回 None），语法如下：
-
-list.sort(key=None, reverse=False)
-
-2.2 核心参数详解
-
-参数1：reverse（控制升序/降序）
-
-- 默认值：False → 升序排列（从小到大）。
-
-- 设置为 True → 降序排列（从大到小）。
-
-# 示例
-nums = [3, 1, 4, 1, 5, 9]
-nums.sort()  # 升序：[1, 1, 3, 4, 5, 9]
-nums.sort(reverse=True)  # 降序：[9, 5, 4, 3, 1, 1]
-
-参数2：key（自定义排序依据，最常用）
-
-接收一个函数（或 lambda 匿名函数），该函数作用于列表的每个元素，排序时按函数返回值的大小排序，而非元素本身。
-
-默认值：None → 直接比较元素本身。
-
-# 示例1：按字符串长度排序
-words = ["banana", "apple", "cherry", "date"]
-words.sort(key=len)  # 结果：['date', 'apple', 'banana', 'cherry']
-
-# 示例2：按绝对值排序
-nums = [-3, 1, -4, -2]
-nums.sort(key=abs)  # 结果：[1, -2, -3, -4]
-
-# 示例3：对字典列表按指定键排序
-students = [{"name": "Tom", "score": 85}, {"name": "Jerry", "score": 92}, {"name": "Alice", "score": 78}]
-students.sort(key=lambda x: x["score"])  # 按score升序
-
-2.3 关键特性
-
-- 原地排序：直接修改原列表，不创建新列表（若需保留原列表，用 sorted() 函数）。
-
-- 稳定排序：当两个元素的 key 值相等时，保留其在原列表中的相对顺序。
-
-- 仅适用于列表：是列表专属方法，不能用于元组、字符串等其他可迭代对象。
-
-2.4 与 sorted() 函数的区别（补充）
-
-特性
-
-list.sort()
-
-sorted()
-
-适用对象
-
-仅列表
-
-所有可迭代对象（列表、元组、字符串等）
-
-是否修改原对象
-
-是（原地排序）
-
-否（返回新列表）
-
-返回值
-
-None
-
-排序后的新列表
-
-3. 复杂度分析（sort() 底层实现）
-
-Python 的 sort() 方法底层使用 Timsort 算法（一种结合归并排序和插入排序的混合算法），其复杂度为：
-
-- 时间复杂度：O(n log n)（最坏、平均、最好情况均为 O(n log n)，高度优化）。
-
-- 空间复杂度：O(n)（Timsort 算法需额外空间存储临时片段，属于稳定排序的合理开销）。
-
-总结
-
-1. 最大子数组和：最优解为 Kadane 算法（O(n) 时间，O(1) 空间），核心是定义“以当前元素结尾的最大子数组和”，通过动态规划避免重复计算。
-
-2. 轮转数组：最优解为三次反转法（O(n) 时间，O(1) 空间），核心是通过三次反转实现原地修改，关键步骤是 \( k = k \% n \)。
-
-3. sort() 方法：Python 列表内置排序工具，底层为 Timsort 算法，核心参数为 key（自定义排序）和 reverse（控制升降序），高频用于各类排序场景。
-
-复盘重点：掌握动态规划（Kadane 算法）、原地修改技巧（三次反转）、排序工具的灵活使用，理解每种解法的复杂度优化逻辑。
+# LeetCode 刷题笔记 - 数组与动态规划专题
+> 日期：2026.02.04
+> 专题：数组操作、动态规划
+> 题目列表：
+> 1. 53. 最大子数组和
+> 2. 189. 轮转数组
+> 3. 排序算法（Python 内置排序原理与实践）
+
+---
+
+## 一、 53. 最大子数组和
+### 题目描述
+给定一个整数数组 `nums`，找到一个具有最大和的连续子数组（子数组最少包含一个元素），返回其最大和。
+
+### 解题思路
+#### 1. 暴力解法（基础思路）
+- **核心逻辑**：两层循环枚举所有可能的子数组，计算子数组和并记录最大值。
+- **代码实现**
+  ```python
+  class Solution(object):
+      def maxSubArray(self, nums):
+          n = len(nums)
+          if n == 1:
+              return nums[0]
+          max_sum = -1e9
+          for i in range(n):
+              total = 0
+              for j in range(i, n):
+                  total += nums[j]
+                  max_sum = max(max_sum, total)
+          return max_sum
+  ```
+- **复杂度分析**
+  - 时间复杂度：$O(n^2)$，两层嵌套循环遍历所有子数组。
+  - 空间复杂度：$O(1)$，仅使用常数级额外空间。
+
+#### 2. 最优解法：Kadane 算法（动态规划）
+- **核心逻辑**
+  定义子问题：$S[i]$ 表示以 $nums[i]$ 结尾的最大子数组和。
+  推导状态转移方程：
+  $$S[i] = \max(nums[i], S[i-1] + nums[i])$$
+  证明：以 $nums[i]$ 结尾的子数组只有两种可能：
+  - 仅包含 $nums[i]$ 自身，和为 $nums[i]$；
+  - 包含 $nums[i]$ 和以 $nums[i-1]$ 结尾的最优子数组，和为 $S[i-1]+nums[i]$。
+  取两者最大值即为 $S[i]$。全局最大和为所有 $S[i]$ 的最大值。
+
+- **核心代码**
+  ```python
+  class Solution(object):
+      def maxSubArray(self, nums):
+          current_max = global_max = nums[0]
+          for num in nums[1:]:
+              current_max = max(num, current_max + num)
+              global_max = max(global_max, current_max)
+          return global_max
+  ```
+
+- **复杂度分析**
+  - 时间复杂度：$O(n)$，仅需一次遍历数组。
+  - 空间复杂度：$O(1)$，仅使用两个变量维护状态。
+
+---
+
+## 二、 189. 轮转数组
+### 题目描述
+给定一个整数数组 `nums`，将数组中的元素向右轮转 `k` 个位置，要求**原地修改**数组。
+
+### 解题思路
+#### 1. 辅助数组法（基础思路）
+- **核心逻辑**：使用辅助数组存储旋转后的元素，再通过切片赋值覆盖原数组。关键公式：元素 `nums[i]` 旋转后的位置为 $(i+k)\%n$，同时 `k = k\%n` 处理 `k` 大于数组长度的情况。
+- **代码实现**
+  ```python
+  class Solution(object):
+      def rotate(self, nums, k):
+          n = len(nums)
+          k = k % n
+          copy_nums = [0] * n
+          for i in range(n):
+              copy_nums[(i + k) % n] = nums[i]
+          nums[:] = copy_nums # 原地修改
+  ```
+- **复杂度分析**
+  - 时间复杂度：$O(n)$，遍历一次数组。
+  - 空间复杂度：$O(n)$，需要额外数组存储元素。
+
+#### 2. 最优解法：三次反转法
+- **核心逻辑**：数组向右轮转 `k` 位等价于将末尾 `k` 个元素移到开头，通过三次反转实现原地操作：
+  1. 反转整个数组，将末尾 `k` 个元素移到头部（顺序反转）；
+  2. 反转前 `k` 个元素，恢复头部元素顺序；
+  3. 反转后 `n-k` 个元素，恢复尾部元素顺序。
+- **核心代码**
+  ```python
+  class Solution(object):
+      def rotate(self, nums, k):
+          n = len(nums)
+          k = k % n
+
+          def reverse(left, right):
+              while left < right:
+                  nums[left], nums[right] = nums[right], nums[left]
+                  left += 1
+                  right -= 1
+
+          reverse(0, n-1)   # 反转整个数组
+          reverse(0, k-1)   # 反转前k个元素
+          reverse(k, n-1)   # 反转后n-k个元素
+  ```
+- **复杂度分析**
+  - 时间复杂度：$O(n)$，每个元素最多被反转两次，总操作数为 $2n$。
+  - 空间复杂度：$O(1)$，仅使用常数级额外空间，满足原地修改要求。
+
+---
+
+## 三、 Python 排序算法（内置排序原理）
+### 核心知识点
+Python 内置排序的底层实现为 **Timsort** 算法，是归并排序与插入排序的混合算法，适用于真实场景中的大部分数据。
+
+### 两种核心排序方法
+| 方法 | 适用对象 | 是否原地修改 | 返回值 | 核心参数 |
+|------|----------|--------------|--------|----------|
+| `list.sort()` | 仅列表 | 是 | None | `key`：自定义排序依据；`reverse`：升序/降序 |
+| `sorted()` | 所有可迭代对象 | 否 | 新列表 | `key`：自定义排序依据；`reverse`：升序/降序 |
+
+### 关键用法示例
+1. **基础排序**
+   ```python
+   nums = [3,1,4,1,5]
+   nums.sort(reverse=True) # 降序原地排序
+   sorted_nums = sorted(nums, key=abs) # 按绝对值排序
+   ```
+2. **复杂对象排序**
+   ```python
+   students = [{"name":"Tom", "score":85}, {"name":"Jerry", "score":92}]
+   students.sort(key=lambda x: x["score"]) # 按分数升序
+   ```
+
+### 复杂度分析
+- 时间复杂度：平均 $O(n\log n)$，最坏 $O(n\log n)$。
+- 空间复杂度：$O(n)$（Timsort 需临时空间存储归并片段）。
+- 特性：**稳定排序**，相同 `key` 的元素保持原顺序。
+
+---
+
+## 总结
+1. 最大子数组和的最优解为 **Kadane 算法**，动态规划思想降低时间复杂度至 $O(n)$。
+2. 轮转数组的最优解为 **三次反转法**，实现 $O(1)$ 空间复杂度的原地修改。
+3. Python 内置排序依赖 **Timsort**，兼顾效率与实用性，`key` 参数是自定义排序的核心。
+
+# LeetCode 高频数组/矩阵题解总结（238、41）
+本文汇总今日讲解的三道经典算法题，从**暴力解法→逐步优化→最优解**完整呈现思路演进，包含解题思路、数学证明、优化逻辑、各阶段核心代码及复杂度分析，兼顾细节与实用性，适合系统学习。
+
+## 一、LeetCode 238. 除了自身以外数组的乘积
+### 题目描述
+给定整数数组 `nums`，返回数组 `answer`，其中 `answer[i]` 等于 `nums` 中除 `nums[i]` 外所有元素的乘积，**禁止使用除法**，且时间复杂度为 O(n)。
+
+示例：
+输入：`nums = [1,2,3,4]` → 输出：`[24,12,8,6]`
+
+---
+
+### 优化过程：从 O(n) 空间 → O(1) 空间
+#### 阶段1：基础解法（O(n) 空间，左右乘积数组）
+**思路**：分别创建「左侧乘积数组」和「右侧乘积数组」，最后对应位置相乘得到结果。
+- 左侧数组 `L`：`L[i]` 表示 `nums[0]~nums[i-1]` 的乘积；
+- 右侧数组 `R`：`R[i]` 表示 `nums[i+1]~nums[n-1]` 的乘积；
+- 结果：`answer[i] = L[i] × R[i]`。
+
+**核心代码**：
+```python
+def productExceptSelf(nums):
+    n = len(nums)
+    # 初始化左右乘积数组
+    L = [1] * n  # 左侧乘积
+    R = [1] * n  # 右侧乘积
+    answer = [1] * n
+
+    # 计算左侧乘积
+    for i in range(1, n):
+        L[i] = L[i-1] * nums[i-1]
+
+    # 计算右侧乘积
+    for i in range(n-2, -1, -1):
+        R[i] = R[i+1] * nums[i+1]
+
+    # 合并结果
+    for i in range(n):
+        answer[i] = L[i] * R[i]
+
+    return answer
+```
+
+**复杂度分析**：
+- 时间复杂度：O(n)，三次线性遍历；
+- 空间复杂度：O(n)，需额外存储 `L` 和 `R` 两个数组。
+
+#### 阶段2：优化解法（O(1) 空间，原地复用）
+**优化思路**：无需单独存储 `L` 和 `R`，用结果数组复用左侧乘积，用变量实时计算右侧乘积，节省空间。
+- 第一次遍历：结果数组直接存左侧乘积，替代 `L` 数组；
+- 第二次反向遍历：用 `right_product` 变量实时计算右侧乘积，直接与结果数组相乘，替代 `R` 数组。
+
+**核心代码**：
+```python
+def productExceptSelf(nums):
+    n = len(nums)
+    answer = [1] * n  # 复用结果数组存储左侧乘积
+    
+    # 计算左侧乘积（替代L数组）
+    left_product = 1
+    for i in range(n):
+        answer[i] = left_product
+        left_product *= nums[i]
+    
+    # 计算右侧乘积并合并（替代R数组，变量实时计算）
+    right_product = 1
+    for i in range(n-1, -1, -1):
+        answer[i] *= right_product
+        right_product *= nums[i]
+    
+    return answer
+```
+
+**复杂度分析**：
+- 时间复杂度：O(n)，仅两次线性遍历；
+- 空间复杂度：O(1)，除输出数组外，仅用两个临时变量，满足进阶要求。
+
+---
+
+## 二、LeetCode 41. 缺失的第一个正数
+### 题目描述
+给定未排序整数数组 `nums`，找出**未出现的最小正整数**，要求时间复杂度 O(n)、空间复杂度 O(1)。
+
+示例：
+输入：`nums = [3,4,-1,1]` → 输出：`2`
+输入：`nums = [7,8,9,11,12]` → 输出：`1`
+
+---
+
+### 优化过程：从 O(n) 空间 → O(1) 空间
+#### 阶段1：基础解法（O(n) 空间，哈希表）
+**思路**：用哈希表存储数组中所有正整数，再从 1 开始遍历，第一个不在哈希表中的数即为答案。
+- 优点：思路直观，易实现；
+- 缺点：需额外 O(n) 空间存储哈希表，不满足题目进阶要求。
+
+**核心代码**：
+```python
+def firstMissingPositive(nums):
+    n = len(nums)
+    # 用集合存储所有正整数
+    positive_nums = set()
+    for num in nums:
+        if num > 0:
+            positive_nums.add(num)
+
+    # 从1开始查找缺失的最小正整数
+    for i in range(1, n+2):
+        if i not in positive_nums:
+            return i
+```
+
+**复杂度分析**：
+- 时间复杂度：O(n)，两次线性遍历；
+- 空间复杂度：O(n)，需存储哈希表。
+
+#### 阶段2：优化解法（O(1) 空间，抽屉原理+原地哈希）
+**数学证明（抽屉原理）**：
+设数组长度为 n，缺失的最小正整数一定在 `[1, n+1]` 范围内：
+- 若数组包含 `1~n` 所有正整数 → 缺失数为 `n+1`；
+- 若数组不包含 `1~n` 中某个数 → 缺失数为该数（最小未出现者）。
+
+**优化思路**：利用数组下标与正整数的对应关系（数字 k 对应下标 k-1），通过**原地交换**将 `1~n` 的数归位，无需额外空间。
+- 仅处理 `1~n` 范围内的数，负数、0 及大于 n 的数直接忽略；
+- 用 `while` 循环确保每个数归位，避免单次 `for` 循环漏处理。
+
+**核心代码**：
+```python
+def firstMissingPositive(nums):
+    n = len(nums)
+    
+    # 原地归位：数字k → 下标k-1
+    for i in range(n):
+        # 仅处理有效范围的数，且未归位时交换
+        while 1 <= nums[i] <= n and nums[nums[i]-1] != nums[i]:
+            nums[nums[i]-1], nums[i] = nums[i], nums[nums[i]-1]
+    
+    # 查找第一个未归位的位置，即为答案
+    for i in range(n):
+        if nums[i] != i + 1:
+            return i + 1
+    
+    # 1~n全部存在，返回n+1
+    return n + 1
+```
+
+**复杂度分析**：
+- 时间复杂度：O(n)，每个数最多交换归位一次，两次线性遍历；
+- 空间复杂度：O(1)，仅用常数级变量，原地操作。
+
+---
+
+## 三、LeetCode 73. 矩阵置零
+### 题目描述
+给定 m×n 矩阵，若某个元素为 0，则将其所在行和列全部置 0，要求**原地修改**，进阶要求空间复杂度 O(1)。
+
+示例：
+输入：`matrix = [[1,1,1],[1,0,1],[1,1,1]]` → 输出：`[[1,0,1],[0,0,0],[1,0,1]]`
+
+---
+
+### 优化过程：从 O(mn) 空间 → O(m+n) 空间 → O(1) 空间
+#### 阶段1：暴力解法（O(mn) 空间，记录所有0坐标）
+**思路**：先遍历矩阵，记录所有 0 的坐标，再根据坐标将对应行和列置 0。
+- 优点：思路直观，完全避免“边遍历边修改”的干扰；
+- 缺点：最坏情况下（矩阵全为0），需 O(mn) 空间存储坐标，空间效率极低。
+
+**核心代码**：
+```python
+def setZeroes(matrix):
+    m = len(matrix)
+    n = len(matrix[0])
+    zero_positions = []  # 存储所有0的坐标
+
+    # 第一步：记录所有0的位置
+    for i in range(m):
+        for j in range(n):
+            if matrix[i][j] == 0:
+                zero_positions.append((i, j))
+    
+    # 第二步：根据坐标置零对应行和列
+    for i, j in zero_positions:
+        # 置零第i行
+        for k in range(n):
+            matrix[i][k] = 0
+        # 置零第j列
+        for k in range(m):
+            matrix[k][j] = 0
+```
+
+**复杂度分析**：
+- 时间复杂度：O(m×n)，两次线性遍历；
+- 空间复杂度：O(mn)，最坏情况存储所有元素坐标。
+
+#### 阶段2：优化解法（O(m+n) 空间，行/列标记数组）
+**优化思路**：无需记录所有0坐标，只需记录「哪些行需要置零」「哪些列需要置零」，用两个一维数组替代二维坐标列表，空间复杂度降至 O(m+n)。
+- 行标记数组 `row`：`row[i] = True` 表示第 i 行需要置零；
+- 列标记数组 `col`：`col[j] = True` 表示第 j 列需要置零。
+
+**核心代码**：
+```python
+def setZeroes(matrix):
+    m = len(matrix)
+    n = len(matrix[0])
+    row = [False] * m  # 标记需要置零的行
+    col = [False] * n  # 标记需要置零的列
+
+    # 第一步：标记需要置零的行和列
+    for i in range(m):
+        for j in range(n):
+            if matrix[i][j] == 0:
+                row[i] = True
+                col[j] = True
+    
+    # 第二步：根据标记置零行
+    for i in range(m):
+        if row[i]:
+            for j in range(n):
+                matrix[i][j] = 0
+    
+    # 第三步：根据标记置零列
+    for j in range(n):
+        if col[j]:
+            for i in range(m):
+                matrix[i][j] = 0
+```
+
+**复杂度分析**：
+- 时间复杂度：O(m×n)，三次线性遍历；
+- 空间复杂度：O(m+n)，用两个一维数组存储标记，空间效率大幅提升。
+
+#### 阶段3：最优解法（O(1) 空间，首行首列标记法）
+**优化思路**：利用**矩阵首行、首列作为标记位**，替代 `row` 和 `col` 数组，空间复杂度降至 O(1)。
+- 关键：首行、首列既要做标记，又可能原本有0，需用 `row0`、`col0` 提前记录原始状态，避免标记覆盖原始信息；
+- 步骤：先标记→再置零非首行首列→最后置零首行首列。
+
+**核心代码**：
+```python
+def setZeroes(matrix):
+    m = len(matrix)
+    n = len(matrix[0])
+    row0 = False  # 标记首行是否有0
+    col0 = False  # 标记首列是否有0
+    
+    # 1. 记录首行、首列原始状态（避免标记覆盖）
+    for j in range(n):
+        if matrix[0][j] == 0:
+            row0 = True
+            break
+    for i in range(m):
+        if matrix[i][0] == 0:
+            col0 = True
+            break
+    
+    # 2. 用首行首列标记需置零的行和列（仅遍历非首行首列）
+    for i in range(1, m):
+        for j in range(1, n):
+            if matrix[i][j] == 0:
+                matrix[i][0] = 0  # 标记第i行
+                matrix[0][j] = 0  # 标记第j列
+    
+    # 3. 根据标记置零非首行首列元素
+    for i in range(1, m):
+        for j in range(1, n):
+            if matrix[i][0] == 0 or matrix[0][j] == 0:
+                matrix[i][j] = 0
+    
+    # 4. 置零首行、首列（根据原始标记）
+    if row0:
+        for j in range(n):
+            matrix[0][j] = 0
+    if col0:
+        for i in range(m):
+            matrix[i][0] = 0
+```
+
+**复杂度分析**：
+- 时间复杂度：O(m×n)，四次线性遍历；
+- 空间复杂度：O(1)，仅用两个布尔变量，满足题目所有要求。
+
+---
+
+
+### 通用优化技巧
+1. **空间复用**：优先复用输入/输出空间，减少额外数组使用；
+2. **标记简化**：从记录具体位置→记录行/列状态→利用自身空间做标记，逐步降低空间复杂度；
+3. **数学推导**：通过数学原理（如抽屉原理）缩小问题范围，减少无效计算；
+4. **遍历顺序**：正向/反向遍历结合，简化乘积、标记等逻辑。
