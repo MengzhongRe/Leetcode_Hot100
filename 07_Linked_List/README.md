@@ -473,3 +473,417 @@ class Solution(object):
 2. 指针操作遵循「先衔接后修改」，防止断链；
 3. 循环条件需覆盖「边界场景」（如进位、奇数长度）；
 4. 时间复杂度优先优化到 O(n)，空间复杂度优先 O(1)（迭代法）。
+
+---
+
+# 📚 链表进阶算法笔记 (Linked List Mastery)
+
+## 📌 目录
+1.  **[25] K 个一组翻转链表** —— 链表指针操作的天花板
+2.  **[148] 排序链表** —— 归并排序在链表中的应用
+3.  **[138] 随机链表的复制** —— 空间优化的极致技巧
+
+---
+
+## ⚔️ 1. [25] K 个一组翻转链表 (Reverse Nodes in k-Group)
+
+> **一句话题解**：
+> 这是一个“局部翻转 + 全局连接”的问题。核心在于维护好每组的“前驱节点”和“后继节点”，防止断链。
+
+### 💡 解题思路 (迭代法)
+1.  **探路**：从当前位置向后走 $k$ 步，判断剩余节点是否足够 $k$ 个。若不足，直接结束（保持原样）。
+2.  **断开与记录**：记录当前组的头 `start`、尾 `end`，以及下一组的头 `next_group_head`。
+3.  **局部翻转**：对 `[start, end]` 区间进行标准链表翻转。
+4.  **拼接**：
+    *   将上一组的尾巴 `prev_group_tail` 连接到翻转后的新头（原 `end`）。
+    *   将翻转后的新尾巴（原 `start`）连接到下一组的头 `next_group_head`。
+5.  **推进**：更新 `prev_group_tail`，进入下一轮。
+
+### 🚀 核心代码 (Python)
+```python
+class Solution(object):
+    def reverseKGroup(self, head, k):
+        dummy = ListNode(0)
+        dummy.next = head
+        prev_group_tail = dummy # 永远指向"待翻转区域"的前一个节点
+
+        while True:
+            # 1. 检查剩余节点是否有 k 个
+            kth = prev_group_tail
+            for _ in range(k):
+                kth = kth.next
+                if not kth:
+                    return dummy.next # 不足 k 个，直接返回
+            
+            # 2. 记录关键节点
+            group_start = prev_group_tail.next
+            next_group_head = kth.next
+            
+            # 3. 翻转当前组 (传入头部和尾部)
+            # 翻转后：group_start 变成尾，kth 变成头
+            self.reverse(group_start, kth)
+            
+            # 4. 重新连接
+            prev_group_tail.next = kth        # 上一组尾 -> 接当前组新头
+            group_start.next = next_group_head # 当前组新尾 -> 接下一组头
+            
+            # 5. 指针推进
+            prev_group_tail = group_start
+    
+    # 辅助函数：翻转 [start, end] 区间
+    def reverse(self, start, end):
+        prev, curr = None, start
+        while prev != end: # 巧妙的终止条件
+            nxt = curr.next
+            curr.next = prev
+            prev = curr
+            curr = nxt
+```
+
+### 📊 复杂度分析
+*   **时间复杂度**：$O(N)$。每个节点被访问两次（一次探路，一次翻转）。
+*   **空间复杂度**：$O(1)$。只使用了有限的指针变量。
+
+---
+
+## ⚔️ 2. [148] 排序链表 (Sort List)
+
+> **一句话题解**：
+> 链表排序首选 **归并排序 (Merge Sort)**。利用分治思想：切分找中点 -> 递归排序 -> 合并有序链表。
+
+### 💡 解题思路 (递归归并)
+1.  **Base Case**：若链表为空或只有一个节点，视为有序，直接返回。
+2.  **找中点 (Cut)**：使用 **快慢指针**。
+    *   *技巧*：`fast` 初始指向 `head.next`，确保偶数个节点时 `slow` 停在左半部分的最后一个节点，方便断链。
+3.  **递归 (Conquer)**：
+    *   `left = sortList(head)`
+    *   `right = sortList(mid)`
+4.  **合并 (Merge)**：使用“合并两个有序链表”的逻辑（LeetCode 21 原题）将左右两部分合并。
+
+### 🚀 核心代码 (Python)
+```python
+class Solution(object):
+    def sortList(self, head):
+        # 1. 终止条件
+        if not head or not head.next:
+            return head
+        
+        # 2. 快慢指针找中点
+        slow, fast = head, head.next
+        while fast and fast.next:
+            slow = slow.next
+            fast = fast.next.next
+        
+        # 3. 切分链表
+        mid = slow.next
+        slow.next = None # 【关键】断链
+        
+        # 4. 递归排序
+        left = self.sortList(head)
+        right = self.sortList(mid)
+        
+        # 5. 合并
+        return self.merge(left, right)
+
+    def merge(self, l1, l2):
+        dummy = ListNode(0)
+        curr = dummy
+        while l1 and l2:
+            if l1.val < l2.val:
+                curr.next = l1
+                l1 = l1.next
+            else:
+                curr.next = l2
+                l2 = l2.next
+            curr = curr.next
+        curr.next = l1 if l1 else l2
+        return dummy.next
+```
+
+### 📊 复杂度分析
+*   **时间复杂度**：$O(N \log N)$。递归树层级为 $\log N$，每层合并耗时 $N$。
+*   **空间复杂度**：$O(\log N)$。递归栈的深度（若用迭代法则为 $O(1)$，但递归法更适合面试手写）。
+
+---
+
+## ⚔️ 3. [138] 随机链表的复制 (Copy List with Random Pointer)
+
+> **一句话题解**：
+> 如何处理随机指针指向“还没创建的节点”？
+> **方法一**：哈希表存映射（简单直观）。
+> **方法二**：交替拼接链表（原地算法，空间最优）。
+
+### 💡 解题思路 (原地交替拼接法)
+这是**空间复杂度 O(1)** 的神级解法，分三步走：
+1.  **复制节点并拼接**：
+    *   将新节点 $A'$ 插在原节点 $A$ 后面。
+    *   变身前：`A -> B -> C`
+    *   变身后：`A -> A' -> B -> B' -> C -> C'`
+2.  **复制 Random 指针**：
+    *   因为 $A'$ 在 $A$ 后面，所以 $A'$.random 就是 $A$.random.next。
+    *   `curr.next.random = curr.random.next` (若 `curr.random` 存在)。
+3.  **拆分链表**：
+    *   将交织在一起的链表拆开，恢复原链表，并提取出新链表。
+    *   `curr.next = curr.next.next`。
+
+### 🚀 核心代码 (Python)
+```python
+class Solution(object):
+    def copyRandomList(self, head):
+        if not head: return None
+        
+        # 第一步：复制节点，交替拼接
+        # A -> B  =>  A -> A' -> B -> B'
+        curr = head
+        while curr:
+            new_node = Node(curr.val)
+            new_node.next = curr.next
+            curr.next = new_node
+            curr = new_node.next # 移动到下一个原节点
+            
+        # 第二步：复制 random 指针
+        curr = head
+        while curr:
+            if curr.random:
+                # 新节点的 random 指向 原节点 random 的下一个（也就是它的副本）
+                curr.next.random = curr.random.next
+            curr = curr.next.next
+            
+        # 第三步：拆分链表
+        # 恢复原链表，提取新链表
+        curr = head
+        new_head = head.next
+        while curr.next:
+            nxt = curr.next # nxt 是新节点
+            curr.next = nxt.next # 原节点指向原节点
+            curr = nxt # 步进
+            
+        return new_head
+```
+
+### 📊 复杂度分析
+*   **时间复杂度**：$O(N)$。遍历了三次链表。
+*   **空间复杂度**：$O(1)$。除了返回用的新链表空间外，没有使用额外的 Hash Map。
+
+---
+
+### 🏆 总结对比
+
+| 题目 | 核心难点 | 关键技巧 | 复杂度 (Time/Space) |
+| :--- | :--- | :--- | :--- |
+| **[25] K个一组翻转** | 局部翻转后的断链与重连 | `prev_group_tail` 锚点，`reverse` 返回范围 | $O(N)$ / $O(1)$ |
+| **[148] 排序链表** | $O(N \log N)$ 的时间限制 | 快慢指针找中点 + 归并排序 | $O(N \log N)$ / $O(\log N)$ |
+| **[138] 随机指针复制** | 深拷贝时的节点映射 | **A -> A' -> B -> B'** 交替拼接法 | $O(N)$ / $O(1)$ |
+
+---
+
+## ⚔️ 1. [23] 合并 K 个升序链表 (Merge k Sorted Lists)
+
+> **一句话题解**：
+> 面对多路有序数据流的合并，**最小堆 (Min-Heap)** 是永远的神，它能充当“高效筛选器”，每次以 $O(\log k)$ 的代价选出当前最小的节点。
+
+### 📉 优化过程推演
+
+*   **阶段一：暴力法 (Brute Force)**
+    *   **思路**：把所有链表的节点全部扔到一个大数组里，然后对数组排序，最后重建链表。
+    *   **痛点**：完全忽略了“链表已经有序”这个宝贵信息。时间复杂度 $O(N \log N)$，空间 $O(N)$。
+    
+*   **阶段二：逐一比较法 (Compare One by One)**
+    *   **思路**：每次遍历 $K$ 个链表的头节点，找出最小的那个，接到结果后面。
+    *   **痛点**：每选一个节点都要遍历 $K$ 次。总时间 $O(N \times K)$。当 $K$ 很大时，效率极低。
+
+*   **阶段三：优先队列 / 最小堆 (Priority Queue - Optimal)**
+    *   **思路**：我们要快速在 $K$ 个数中找到最小值，这正是**最小堆**的强项。我们将比较的复杂度从 $O(K)$ 降维到了 $O(\log K)$。
+    *   **关键技巧**：Python 的 `heapq` 无法直接比较 `ListNode` 对象。
+        *   *错误写法*：`heapq.heappush(h, node)` -> 报错 `TypeError`。
+        *   *正确写法*：存入三元组 `(val, index, node)`。`val` 用于排序，`index` 用于打破平局（Tie-breaker），确保永远不需要比较 `node` 对象本身。
+
+### 🚀 核心代码 (Python)
+
+```python
+import heapq
+
+class Solution(object):
+    def mergeKLists(self, lists):
+        # 1. 初始化最小堆
+        # 堆中存放三元组：(节点值, 唯一索引, 节点对象)
+        min_heap = []
+        for i, node in enumerate(lists):
+            if node:
+                heapq.heappush(min_heap, (node.val, i, node))
+        
+        # 2. 虚拟头节点，简化链表构建
+        dummy = ListNode(0)
+        curr = dummy
+        
+        # 3. 循环弹出最小值
+        while min_heap:
+            # 弹出堆顶（当前所有链表头中最小的那个）
+            val, i, node = heapq.heappop(min_heap)
+            
+            # 拼接到结果链表
+            curr.next = node
+            curr = curr.next
+            
+            # 4. 补充新元素
+            # 如果被弹出的节点还有后继，将其推入堆中
+            if node.next:
+                heapq.heappush(min_heap, (node.next.val, i, node.next))
+                
+        return dummy.next
+```
+
+### 📊 复杂度分析
+*   **时间复杂度**：$O(N \log K)$。
+    *   $N$ 是所有节点的总数，$K$ 是链表的条数。
+    *   每个节点都会进堆出堆一次，每次堆操作耗时 $O(\log K)$。
+*   **空间复杂度**：$O(K)$。
+    *   堆中最多同时存在 $K$ 个元素（每条链表的当前头节点）。
+
+---
+
+## ⚔️ 2. [146] LRU 缓存 (LRU Cache)
+
+> **一句话题解**：
+> 当需要同时满足 **查找快** (Hash Map) 和 **维护时间顺序** (Linked List) 时，**哈希表 + 双向链表** 是唯一的正解。
+
+### 🧠 设计思路推演
+
+*   **需求分析**：
+    1.  `get(key)`: 需要 $O(1)$ 找到数据 -> **必须用哈希表**。
+    2.  `put(key, value)`: 
+        *   需要 $O(1)$ 更新数据。
+        *   **难点**：当缓存满时，需要淘汰“最久未使用的”。这意味着我们需要维护一个时间顺序队列。
+    3.  **核心冲突**：
+        *   用数组/普通队列存顺序？删除中间某个节点（比如把刚访问的元素移到队尾）需要 $O(N)$ 的移动时间。**不合格**。
+        *   用单向链表？删除节点需要遍历找到前驱，也是 $O(N)$。**不合格**。
+    
+*   **最终方案：哈希链表 (Hash + Doubly Linked List)**
+    *   **双向链表**：节点自带 `prev` 和 `next` 指针，**只要拿到了节点对象的引用，就能在 $O(1)$ 时间内把自己从链表中摘除**。
+    *   **哈希表**：存储 `Key -> Node` 的映射。让我们能瞬间拿到节点对象的引用。
+
+### 🏗️ 架构设计图
+*   **Head (伪头)** <-> [最新节点] <-> [次新节点] <-> ... <-> [最旧节点] <-> **Tail (伪尾)**
+*   *注：也可以定义 Head 为最旧，Tail 为最新，只要逻辑自洽即可。下文代码采用 Head 为最新。*
+
+### 🚀 核心代码 (标准手写版)
+
+```python
+class DLinkedNode:
+    """双向链表节点"""
+    def __init__(self, key=0, value=0):
+        self.key = key
+        self.value = value
+        self.prev = None
+        self.next = None
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cache = dict() # Hash Map: key -> node
+        self.capacity = capacity
+        self.size = 0
+        # 伪头和伪尾，避免处理 null 指针
+        self.head = DLinkedNode()
+        self.tail = DLinkedNode()
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def get(self, key):
+        if key not in self.cache:
+            return -1
+        # 1. 通过哈希表找到节点
+        node = self.cache[key]
+        # 2. 移动到头部（标记为最近使用）
+        self.moveToHead(node)
+        return node.value
+
+    def put(self, key, value):
+        if key not in self.cache:
+            # 新增节点
+            node = DLinkedNode(key, value)
+            self.cache[key] = node
+            self.addToHead(node) # 放在头部
+            self.size += 1
+            
+            if self.size > self.capacity:
+                # 淘汰最久未使用的（尾部节点）
+                removed = self.removeTail()
+                self.cache.pop(removed.key) # 别忘了删哈希表
+                self.size -= 1
+        else:
+            # 更新节点
+            node = self.cache[key]
+            node.value = value
+            self.moveToHead(node)
+
+    # --- O(1) 的链表操作 ---
+    
+    def addToHead(self, node):
+        """插入到伪头之后"""
+        node.prev = self.head
+        node.next = self.head.next
+        self.head.next.prev = node
+        self.head.next = node
+
+    def removeNode(self, node):
+        """从链表中摘除节点"""
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def moveToHead(self, node):
+        """移动到头部 = 先摘除 + 再插入"""
+        self.removeNode(node)
+        self.addToHead(node)
+
+    def removeTail(self):
+        """删除尾部节点（淘汰）"""
+        res = self.tail.prev
+        self.removeNode(res)
+        return res
+```
+
+### ⚡ Python 作弊版 (OrderedDict)
+面试时如果允许使用标准库，可以用这个。原理相同，但封装更完美。
+
+```python
+from collections import OrderedDict
+
+class LRUCache(OrderedDict):
+    def __init__(self, capacity):
+        super().__init__()
+        self.capacity = capacity
+
+    def get(self, key):
+        if key not in self:
+            return -1
+        self.move_to_end(key) # 刷新到末尾
+        return self[key]
+
+    def put(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        self[key] = value
+        if len(self) > self.capacity:
+            self.popitem(last=False) # 弹出开头（最旧的）
+```
+
+### 📊 复杂度分析
+*   **时间复杂度**：
+    *   `get`: $O(1)$。哈希查找 + 链表指针修改，均为常数操作。
+    *   `put`: $O(1)$。同上。
+*   **空间复杂度**：$O(capacity)$。
+    *   需要存储 `capacity` 个节点和哈希表条目。
+
+---
+
+## 🏆 总结与对比
+
+| 题目 | 核心数据结构 | 关键技巧 | 为什么难？ |
+| :--- | :--- | :--- | :--- |
+| **[23] 合并K个链表** | **最小堆 (Min-Heap)** | 存入三元组 `(val, i, node)` 避免比较报错 | 需要理解堆如何处理流式数据的 Top K 问题。 |
+| **[146] LRU 缓存** | **哈希表 + 双向链表** | 伪头伪尾 (`dummy head/tail`) 简化边界判断 | 需要手写双向链表的指针操作，容易写错 prev/next。 |
+
+**🌟 今日心得**：
+1.  **堆** 是处理“在一堆动态数据中找最值”的最佳工具。
+2.  **双向链表** 的最大优势在于：一旦拥有节点引用，删除自身只需要 $O(1)$。
+3.  **复合数据结构**（如哈希表+链表）通常是解决 $O(1)$ 复杂约束问题的终极方案。
