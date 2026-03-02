@@ -18,33 +18,12 @@ class Solution(object):
         :type root: Optional[TreeNode]
         :rtype: int
         """
-        # if not root:
-        #     return 0
-        # left_height = self.maxDepth(root.left)
-        # right_height = self.maxDepth(root.right)
-
-        # return 1 + max(left_height,right_height)
         if not root:
             return 0
-        # 初始化双端队列,直接把根节点加入队列中
-        queue = deque([root])
-        depth = 0
+        left_height = self.maxDepth(root.left)
+        right_height = self.maxDepth(root.right)
 
-        while queue:
-            # 记录当前层节点的个数
-            # 因为在下面的for循环过程中队列的长度会改变
-            level_size = len(queue)
-            # 把当前层的左右节点一个一个拿出来，并把他们的字节点放到队列尾部
-            for _ in range(level_size):
-                node = queue.popleft() # 当前层的最左侧节点即最早入队的出列并获取该节点(即队列头部)，O(1)
-                if node.left:
-                    queue.append(node.left) # O(1)
-                if node.right:
-                    queue.append(node.right) # O(1)
-                
-            depth += 1 #当前层处理完 + 1
-        
-        return depth
+        return 1 + max(left_height,right_height)
 # 时间复杂度O(N),每个节点被访问一次
 # 空间复杂度O(H),H为树的高度     
 # @lc code=end
