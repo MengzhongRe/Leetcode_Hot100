@@ -447,3 +447,225 @@ class Solution:
 1. 优先使用迭代（队列）实现层序遍历，递归仅作拓展；
 2. 避免递归栈溢出：深度大的树优先用迭代解法；
 3. 数据结构选择：队列用`deque`，避免普通列表的低效操作。
+
+# 二叉搜索树（BST）经典题目解题总结
+> 核心考点：BST特性（中序升序、左小右大）、递归/迭代遍历、平衡树构建、高效查询优化  
+
+## 目录
+- [108. 将有序数组转换为二叉搜索树](#108-将有序数组转换为二叉搜索树)
+- [98. 验证二叉搜索树](#98-验证二叉搜索树)
+- [230. 二叉搜索树中第k小的元素](#230-二叉搜索树中第k小的元素)
+- [核心知识点总结](#核心知识点总结)
+
+---
+
+## 108. 将有序数组转换为二叉搜索树
+### 题目描述
+将升序数组转换为**高度平衡**的二叉搜索树（BST），平衡定义：左右子树高度差≤1。
+
+### 解题思路
+#### 核心逻辑
+1. BST特性：中序遍历为升序数组 → 数组中点作为根节点，左半区为左子树，右半区为右子树；
+2. 平衡要求：选中点作为根，保证左右子树节点数尽可能均衡，避免退化为链表；
+3. 分治思想：递归处理左右子数组，构建子树。
+
+#### 实现步骤
+1. 找当前数组中点 `mid`，作为当前子树根节点；
+2. 递归构建左子树（`[left, mid-1]`）和右子树（`[mid+1, right]`）；
+3. 终止条件：`left > right`（子数组为空）。
+
+### 核心代码（最优解）
+```python
+from typing import List, Optional
+
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+class Solution:
+    def sortedArrayToBST(self, nums: List[int]) -> Optional[TreeNode]:
+        def build(left: int, right: int) -> Optional[TreeNode]:
+            # 终止条件：区间无效
+            if left > right:
+                return None
+            # 选中点作为根（偏左/偏右均可，保证平衡）
+            mid = (left + right) // 2
+            root = TreeNode(nums[mid])
+            # 递归构建左右子树
+            root.left = build(left, mid - 1)
+            root.right = build(mid + 1, right)
+            return root
+        
+        return build(0, len(nums) - 1)
+```
+
+### 优化过程
+| 优化阶段 | 初始思路 | 优化点 |
+|----------|----------|--------|
+| 1. 基础版 | 数组切片（`nums[:mid]`）构建子树 | 切片生成新数组，空间O(n) → 改用`left/right`指针，仅操作索引，空间O(1) |
+| 2. 平衡版 | 选最左/最右元素为根 | 选中点为根，保证树平衡，时间/空间更优 |
+
+### 复杂度分析
+- **时间复杂度**：O(n)（每个节点仅创建一次）；
+- **空间复杂度**：O(logn)（递归栈深度，平衡树高度=logn）。
+
+---
+
+## 98. 验证二叉搜索树
+### 题目描述
+验证一棵二叉树是否为有效的BST（左子树所有节点<根，右子树所有节点>根，且左右子树也为BST）。
+
+### 解题思路
+#### 核心逻辑
+1. 错误思路：仅验证当前节点与直接子节点的大小关系（漏检深层节点）；
+2. 正确思路：递归传递**上下界**，限制每个节点的合法值范围：
+   - 根节点范围：(-∞, +∞)；
+   - 左子节点范围：(父节点下界, 父节点值)；
+   - 右子节点范围：(父节点值, 父节点上界)。
+
+#### 实现步骤
+1. 初始化上下界为负无穷、正无穷；
+2. 递归检查节点值是否在合法范围；
+3. 递归验证左/右子树，更新对应上下界；
+4. 终止条件：空节点（合法）或节点值越界（非法）。
+
+### 核心代码（最优解）
+```python
+from typing import Optional
+
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode]) -> bool:
+        def isValid(node: Optional[TreeNode], lower: float, upper: float) -> bool:
+            if not node:
+                return True
+            # 节点值越界，直接非法
+            if node.val <= lower or node.val >= upper:
+                return False
+            # 递归验证左右子树，更新上下界
+            return isValid(node.left, lower, node.val) and isValid(node.right, node.val, upper)
+        
+        return isValid(root, float('-inf'), float('inf'))
+```
+
+### 优化过程
+| 优化阶段 | 初始思路 | 优化点 |
+|----------|----------|--------|
+| 1. 错误版 | 仅验证当前节点与直接子节点 | 增加上下界，覆盖所有子树节点的范围限制 |
+| 2. 进阶版 | 递归上下界 | 补充中序遍历解法（BST中序升序），迭代实现避免栈溢出 |
+
+#### 拓展：中序遍历验证（辅助解法）
+```python
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode]) -> bool:
+        self.prev = float('-inf')
+        def inorder(node):
+            if not node:
+                return True
+            if not inorder(node.left):
+                return False
+            if node.val <= self.prev:
+                return False
+            self.prev = node.val
+            return inorder(node.right)
+        return inorder(root)
+```
+
+### 复杂度分析
+- **时间复杂度**：O(n)（每个节点仅访问一次）；
+- **空间复杂度**：O(h)（h为树高，平衡树O(logn)，链表O(n)）。
+
+---
+
+## 230. 二叉搜索树中第k小的元素
+### 题目描述
+找到BST中第k小的元素（k从1开始）。
+
+### 解题思路
+#### 核心逻辑
+1. BST特性：中序遍历（左→根→右）为升序序列 → 第k小元素是中序遍历的第k个节点；
+2. 优化方向：找到目标后立即终止遍历，避免无效操作。
+
+#### 实现步骤
+1. 迭代模拟中序遍历（栈），先遍历左子树最深处；
+2. 弹出节点时计数，计数等于k时直接返回；
+3. 未找到则遍历右子树，重复步骤1-2。
+
+### 核心代码（最优解：迭代中序遍历）
+```python
+from typing import Optional
+
+class Solution:
+    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:
+        stack = []
+        current = root
+        count = 0
+        
+        while stack or current:
+            # 遍历左子树最深处
+            while current:
+                stack.append(current)
+                current = current.left
+            # 处理当前节点
+            current = stack.pop()
+            count += 1
+            if count == k:
+                return current.val  # 找到后立即返回，提前终止
+            # 遍历右子树
+            current = current.right
+        
+        return -1  # 题目保证k有效，仅兜底
+```
+
+### 优化过程
+| 优化阶段 | 初始思路 | 优化点 |
+|----------|----------|--------|
+| 1. 递归版 | 存储所有中序结果，取第k-1个 | 空间O(n) → 改为计数+提前终止，空间O(h) |
+| 2. 递归计数版 | 计数到k后未终止递归 | 增加`found`标志位，逐层终止递归，减少无效遍历 |
+| 3. 迭代版 | 递归可能栈溢出 | 栈模拟中序，无栈溢出风险，直接return终止整个流程 |
+
+#### 拓展：进阶优化（频繁修改+查询）
+给节点增加`size`属性（子树节点数），查询时通过数值计算定位，时间复杂度O(h)：
+```python
+def kth_smallest_with_size(node, k):
+    left_size = node.left.size if node.left else 0
+    if left_size >= k:
+        return kth_smallest_with_size(node.left, k)
+    elif left_size + 1 == k:
+        return node.val
+    else:
+        return kth_smallest_with_size(node.right, k - (left_size + 1))
+```
+
+### 复杂度分析
+| 解法 | 时间复杂度 | 空间复杂度 |
+|------|------------|------------|
+| 迭代中序（最优） | O(h + k) | O(h) |
+| 递归计数版 | O(h + k) | O(h) |
+| 存储所有中序结果 | O(n) | O(n) |
+| 带size属性版 | O(h) | O(h) |
+
+---
+
+## 核心知识点总结
+### 1. BST核心特性
+- 中序遍历结果为升序数组；
+- 任意节点的左子树所有节点<当前节点<右子树所有节点；
+- 平衡BST（如AVL）保证操作复杂度稳定在O(logn)。
+
+### 2. 高频解题技巧
+| 题目 | 核心技巧 |
+|------|----------|
+| 108 | 分治选中点构建平衡BST，用指针替代数组切片 |
+| 98 | 递归传递上下界，或中序遍历验证升序 |
+| 230 | 迭代中序遍历提前终止，进阶用size属性高效查询 |
+
+### 3. 复杂度规律
+- 时间：所有解法均为O(n)（每个节点仅访问一次）；
+- 空间：递归依赖树高O(h)，迭代栈/队列依赖树高O(h)，存储所有结果依赖O(n)。
+
+### 4. 优化原则
+- 优先用迭代法（栈/队列），避免递归栈溢出；
+- 找到目标后立即终止遍历，减少无效操作；
+- 高频修改场景，用size属性或平衡树（AVL/红黑树）优化查询。

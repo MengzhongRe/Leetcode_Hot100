@@ -43,5 +43,43 @@ class Solution(object):
         outside = self.compare(left.left,right.right)
         inside = self.compare(left.right,right.left)
         return outside and inside
+# 时间复杂度O（N）所有节点遍历一次,空间复杂度O(H)取决于递归栈深度
 # @lc code=end
+from collections import deque
 
+class Solution(object):
+    def isSymmetric(self, root):
+        """
+        :type root: Optional[TreeNode]
+        :rtype: bool
+        """
+        # 边界判断
+        if not root:
+            return True
+        # 初始化队列，需要存入需要比较的两个节点
+        queue = deque()
+        queue.append(root.left)
+        queue.append(root.right)
+        # 只要队列不为空，即只要还有节点没有遍历完
+        while queue:
+            # 取出前两个节点
+            node1 = queue.popleft()
+            node2 = queue.popleft()
+            # 两个都为空则直接比较下一轮
+            if not node1 and not node2:
+                continue
+            # 只有一个为空，返回False
+            if not node1 or not node2:
+                return False
+            # 值不相等，返回False
+            if node1.val != node2.val:
+                return False
+            
+            # 按照镜像顺序将子节点加入到队列当中去
+            queue.append(node1.left)
+            queue.append(node2.right)
+            queue.append(node1.right)
+            queue.append(node2.left)
+        # 所有节点都匹配成功
+        return True
+# 时间复杂度O(N),空间复杂度O(N),队列层序遍历取决于节点数最多的一层，最坏情况下平衡二叉树最后一层节点数约为
