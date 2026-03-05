@@ -18,9 +18,9 @@ class Solution(object):
         :type k: int
         :rtype: int
         """
-        count = [0]
-        res = [0]
-        found = [False]
+        count = [0] # 计数
+        res = [0] # 存储返回值，用列表（可变对象），使得内层递归函数可以修改值
+        found = [False] # 用于标记是否找到目标值
 
         def inorder(node):
             if not node or found[0]:
@@ -38,7 +38,7 @@ class Solution(object):
                 return # 直接返回，不再递归右子树
             # 再处理右子树
             inorder(node.right)
-            
+
         inorder(root)
         return res[0]
 

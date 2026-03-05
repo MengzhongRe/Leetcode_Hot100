@@ -22,7 +22,7 @@ class Solution(object):
         # 遍历每一个数
         for num in nums:
             pre_sum += num # 计算每一个前缀和
-            if (pre_sum - k) in pre_sum_map:# 若pre_sum - k存在于哈希表中，说明存在一个子数组的和为k,且该数组为[i,j]
+            if (pre_sum - k) in pre_sum_map:# 若pre_sum - k存在于哈希表中，且值为v,则说明存在v个以num结尾的子数组的和为k
                 count += pre_sum_map[pre_sum - k] # 累加该前缀和出现的次数
             # 将当前前缀和加入哈希表
             pre_sum_map[pre_sum] = pre_sum_map.get(pre_sum,0) + 1

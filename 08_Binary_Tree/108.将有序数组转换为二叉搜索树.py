@@ -35,19 +35,3 @@ class Solution(object):
 # 时间复杂度O(N),其中N为输入数组的长度，每个元素被访问一次。
 # 空间复杂度O(logN)        
 # @lc code=end
-
-class Solution(object):
-    def sortedArrayToBST(self, nums):
-        """
-        :type nums: List[int]
-        :rtype: Optional[TreeNode]
-        """
-        def build(left,right):
-            if left > right:
-                return
-            mid = (left + right) // 2
-            root = TreeNode(nums[mid])
-            root.left = build(left,mid - 1)
-            root.right = build(mid + 1,right)
-            return root
-        return build(0,len(nums) - 1)
