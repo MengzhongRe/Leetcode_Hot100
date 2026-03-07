@@ -44,10 +44,11 @@ class Solution(object):
         :type inorder: List[int]
         :rtype: Optional[TreeNode]
         """
+        # 用哈希表存储中序遍历中值的索引，方便后续O(1)查找
         dic = dict()
         for i,val in enumerate(inorder):
             dic[val] = i
-
+        # 定义递归函数，创建节点。传入参数为preorder,inorder序列的索引范围，而非数组对象，防止因传入数组切片对象而与哈希表失去对齐
         def build(pre_l,pre_r,in_l,in_r):
             # 递归终止条件
             if pre_l > pre_r or in_l > in_r:
@@ -59,12 +60,14 @@ class Solution(object):
 
             root_index = dic[root_val] # 用哈希表查找根节点值在中序遍历中的索引位置
             left_size = root_index - in_l # 计算左子树大小
-
+            # 递归
             root.left = build(pre_l + 1,pre_l + left_size,in_l,root_index - 1)
             root.right = build(pre_l + 1 + left_size,pre_r,root_index + 1,in_r)
 
             return root
+        # 主逻辑：传入整个序列区间(0,n - 1)
         n = len(preorder)
 
         return build(0,n - 1,0,n - 1)
-
+# 时间复杂度O(N),每个节点需要作为根节点被递归调用一次，总共n次，由于使用了哈希表查找根节点值在中序遍历序列中的索引值，所以是o(1) * n = O(N)
+# 空间复杂度O(N),哈希表O(N),递归调用栈取决于树的高度，最坏也为O(N),因此是O(N)
