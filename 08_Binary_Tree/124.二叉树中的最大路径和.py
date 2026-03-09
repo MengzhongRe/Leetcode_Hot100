@@ -36,6 +36,7 @@ class Solution(object):
         # 启动递归
         dfs(root)
         return self.max_sum
-        
+# 时间复杂度应该是O(N)
+# 空间复杂度应该是O(H)       
 # @lc code=end
 
