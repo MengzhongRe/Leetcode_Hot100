@@ -139,3 +139,162 @@ class Solution(object):
 ### ⏱ 复杂度分析
 * **时间复杂度**：$O(\log N) + O(\log N) = O(\log N)$。执行了两次二分查找，常数项可以忽略。
 * **空间复杂度**：$O(1)$，充分利用了闭包特性，没有开辟额外空间。
+
+
+# 🚀 算法精进笔记：二分查找进阶 (旋转数组双璧)
+
+> **💡 核心心法**：面对旋转排序数组，牢记**“一半乱序，一半必定绝对有序”**。
+> 二分查找的威力不仅在于直接找目标，更在于**找特征点（断层/悬崖）**以及**利用局部有序性不断排除一半的错误答案**。
+
+---
+
+## 🟡 1. 力扣 33. 搜索旋转排序数组 (高频大厂题)
+
+### 🗡️ 解法一：分治与模块化（你的原生解法 - 两次二分法）
+**📝 解题思路**：
+降维打击！将复杂问题拆解为两个简单的标准问题：
+1. **找断点**：先通过一次二分查找到数组的“旋转点”（最大值）。
+2. **切分区间**：以旋转点为界，将原数组劈成两个绝对纯粹的升序数组。
+3. **独立查找**：根据 `target` 的大小判断它在哪一段，然后直接调用最基础的二分查找模板。
+
+**💻 核心代码**：
+```python
+class Solution(object):
+    def search(self, nums, target):
+        n = len(nums)
+        if n == 1: return 0 if nums[0] == target else -1
+
+        # 第一步：找旋转点 (最大值)
+        left, right = 0, n - 1
+        while left <= right:
+            mid = left + (right - left) // 2
+            if nums[mid] > nums[mid + 1]:  # 找到断点
+                break
+            if nums[mid] > nums[n - 1]:
+                left = mid + 1
+            else:
+                right = mid - 1
+
+        # 基础二分查找模板
+        def binary_search(l, r):
+            while l <= r:
+                m = l + (r - l) // 2
+                if nums[m] == target: return m
+                if nums[m] < target: l = m + 1
+                else: r = m - 1
+            return -1
+
+        # 第二步：分治查找 (利用变量存储，避免重复调用)
+        res_left = binary_search(0, mid)
+        return res_left if res_left != -1 else binary_search(mid + 1, n - 1)
+```
+
+### 👑 解法二：局部有序法（终极最优解 - 一次二分法）
+**📝 优化过程**：
+追求极致的 $1 \times \log n$ 遍历。不管怎么切，**数组必定有一半是绝对有序的**。
+1. 判断哪一半是有序的（比较 `nums[left]` 和 `nums[mid]`）。
+2. 判断 `target` 是否正好落在这个有序的区间范围内。
+3. 在就收缩进去，不在就去另一半找。
+
+**💻 核心代码**：
+```python
+class Solution(object):
+    def search(self, nums, target):
+        left, right = 0, len(nums) - 1
+        
+        while left <= right:
+            mid = left + (right - left) // 2
+            if nums[mid] == target: return mid
+                
+            # 左半段是有序的
+            if nums[left] <= nums[mid]:
+                if nums[left] <= target < nums[mid]:
+                    right = mid - 1  # 目标在左侧区间
+                else:
+                    left = mid + 1   # 否则去右侧找
+                    
+            # 右半段是有序的
+            else:
+                if nums[mid] < target <= nums[right]:
+                    left = mid + 1   # 目标在右侧区间
+                else:
+                    right = mid - 1  # 否则去左侧找
+                    
+        return -1
+```
+
+### ⏱ 复杂度分析 (双解法通用)
+* **时间复杂度**：$O(\log n)$。解法一常数项略大（约 $2\log n$），解法二是严格的 $1\log n$，但在大 O 渐进意义上完全等价。
+* **空间复杂度**：$O(1)$。只使用了几个指针变量。
+
+---
+
+## 🟡 2. 力扣 153. 寻找旋转排序数组中的最小值
+
+### 🛡️ 解法一：寻找“悬崖点”（你的原生模板 - 极度安全）
+**📝 解题思路**：
+完美复用 33 题思路。在一个由升序数组旋转得来的序列中，**唯一会出现前一个数大于后一个数的地方，就是首尾相接的那个“断层/悬崖”**。
+通过 `while left <= right` 配合严格的 `+1/-1` 边界收缩，永远不会陷入死循环。
+
+**💻 核心代码**：
+```python
+class Solution(object):
+    def findMin(self, nums):
+        n = len(nums)
+        # 边界防御：数组未旋转（绝对升序）或只有一个元素
+        if n == 1 or nums[0] < nums[n - 1]: return nums[0]
+        
+        left, right = 0, n - 1
+        # 万能安全模板：寻找“悬崖点”
+        while left <= right:
+            mid = left + (right - left) // 2
+            
+            # 定位“悬崖”：前一个数大于后一个数
+            if nums[mid] > nums[mid + 1]: 
+                return nums[mid + 1]
+                
+            # 逼近逻辑：如果 mid 大于末尾，悬崖必定在右侧
+            elif nums[mid] > nums[n - 1]: 
+                left = mid + 1
+            # 否则，悬崖必定在左侧
+            else: 
+                right = mid - 1
+                
+        return -1 
+```
+
+### 🗡️ 解法二：排除法（业界极简模板 - 左闭右开法）
+**📝 优化过程**：
+不找特征点，而是利用**“排除法”**。不断向里挤压区间，只要能把不是最小值的元素全排除，最后剩下的那个独苗必定是最小值。
+**⚠️ 致命易错点**：为了保留真正的最小值，收缩右边界时必须写 `right = mid`。为了防止 `right = mid` 导致的无限死循环，外层循环**必须且只能**写成 `while left < right`！
+
+**💻 核心代码**：
+```python
+class Solution(object):
+    def findMin(self, nums):
+        left, right = 0, len(nums) - 1
+        
+        # 必须是 <，目的是把最后区间收缩到只剩 1 个元素跳出循环
+        while left < right:
+            mid = left + (right - left) // 2
+            
+            # mid 值大于最右侧，说明最小值必定在右半边（且绝对不是 mid 本身）
+            if nums[mid] > nums[right]:
+                left = mid + 1
+            # 否则，最小值必定在左半边（可能是 mid 本身，所以绝对不能 -1）
+            else:
+                right = mid
+                
+        # 循环结束时 left == right，剩下的独苗就是最小值
+        return nums[left]
+```
+
+### ⏱ 复杂度分析 (双解法通用)
+* **时间复杂度**：$O(\log n)$。每次都排除一半的区间。
+* **空间复杂度**：$O(1)$。没有任何额外的数据结构开销。
+
+---
+
+> **🏆 面试实战指南**：
+> 1. **关于 33 题**：在纸上白板推演时，解法一（你的解法）思路最清晰，不易出错；如果面试官要求“只能用一次 while”，立刻掏出解法二。
+> 2. **关于 153 题**：自己做题或笔试时，强烈推荐**解法一**（因为闭区间模板兼容所有题型，心智负担极低）；阅读他人高赞题解时，要能秒懂**解法二**中 `<` 与 `right = mid` 是如何精妙配合防死循环的。
