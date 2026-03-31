@@ -113,3 +113,148 @@ class Solution(object):
 1. **状态机思维（打家劫舍）**：这种“记录多个平行历史状态，每次取最优解向前推进”的思想，正是大模型生成文本时 **Viterbi 解码（维特比算法）** 和 **Beam Search（集束搜索）** 最底层的数学原理。
 2. **底层通用与严谨性**：坚持使用 `tmp` 进行状态交替，不仅展现了极强的跨语言代码素养，也高度契合在底层编写 CUDA / C++ 算子时的内存控制规范。
 3. **避免浅拷贝陷阱**：杨辉三角中的 `res.append(cur[:])` 陷阱，在深度学习框架（如 PyTorch）中极度常见。理解对象引用，能有效避免训练循环中出现梯度张量（Tensor）被原地覆盖修改（In-place operation）导致的灾难性报错。
+
+***
+
+# 🚀 算法精进笔记：完全背包的降维打击 (求最值 vs 求排列)
+
+> **💡 核心心法：完全背包的两副面孔**
+> 面对「完全背包问题」（物品可无限次使用），内外层 `for` 循环的顺序决定了代码的物理意义：
+> 1. **求最值 (Min/Max) 或 组合数**：**【外层物品，内层容量 (正序)】**。每个物品依次入场，不走回头路。
+> 2. **求排列 (区分顺序)**：**【外层容量 (正序)，内层物品】**！在每一个容量阶段，所有物品都有同等的权利竞争入包，从而产生交替出现的排列顺序。
+
+---
+
+## 🟢 一、 力扣 322. 零钱兑换 (完全背包求最值)
+
+### 📝 核心思路与背包映射
+*   **背包模型映射**：背包容量为 `amount`，物品为 `coins`，每个硬币可无限次使用。求装满背包的最少物品数。
+*   **状态定义**：`dp[j]` 表示凑成金额 `j` 所需的最少硬币数。
+*   **转移方程**：`dp[j] = min(dp[j], dp[j - coin] + 1)`。
+*   **最高美学（初始化吞噬边界）**：将 `dp` 数组全初始化为 `float('inf')`，将 `dp[0] = 0` 作为唯一的合法火种。无需任何 `if amount == 0` 的特判，底层逻辑自洽运转。
+
+### 💻 核心代码 (Python)
+```python
+class Solution(object):
+    def coinChange(self, coins, amount):
+        # 1. 完美火种：凑出 0 元需要 0 个硬币
+        dp = [float('inf')] * (amount + 1)
+        dp[0] = 0
+
+        # 2. 完全背包正统模板：外层物品，内层容量 (正序)
+        for coin in coins:
+            for j in range(coin, amount + 1):
+                dp[j] = min(dp[j], dp[j - coin] + 1)
+
+        return dp[amount] if dp[amount] != float('inf') else -1
+```
+### ⏱ 复杂度分析
+*   **时间复杂度**：$O(S \times N)$。$S$ 是总金额，$N$ 是硬币种类。双层循环稳定执行。
+*   **空间复杂度**：$O(S)$。一维滚动数组压榨空间极限。
+
+---
+
+## 🔴 二、 力扣 139. 单词拆分 (完全背包求排列 - 三重境界)
+
+### 📝 核心思路与背包映射
+*   **背包模型映射**：背包容量为字符串长度 `n`，物品为字典里的单词，单词可重复使用。
+*   **状态定义**：`dp[j]` 表示字符串的前 `j` 个字符是否能被成功拼出（True/False）。
+*   **为什么必须是【外层容量，内层物品】？**：因为字符串拼接是**严格区分先后顺序**的（求排列）。拼出 `"applepen"` 必须先有 `"apple"` 再有 `"pen"`，如果外层是单词，则变成了无序组合。
+
+---
+
+### 🗡️ 境界一：遍历字典法 (我的极客微操版)
+**思路**：外层遍历长度 `j`，内层拿字典里的每个 `word` 去匹配小尾巴。
+**🔥 极客微操**：
+1. **短路求值 (Short-circuit Evaluation)**：`if dp[diff] and s[diff:j] == word`。将 $O(1)$ 的数组访问放在 `and` 前面，一旦为 `False`，直接挡住后面极度耗时的 $O(L)$ 字符串切片操作！
+2. **极速剪枝**：一旦匹配成功，立刻 `dp[j] = True` 并 `break` 掉当前内层循环，省去海量无用对比。
+
+```python
+class Solution(object):
+    def wordBreak(self, s, wordDict):
+        n = len(s)
+        dp = [False] * (n + 1)
+        dp[0] = True 
+
+        for j in range(1, n + 1):           # 外层：背包容量
+            for word in wordDict:           # 内层：遍历物品
+                if j >= len(word):
+                    diff = j - len(word)
+                    # 短路求值盾牌 + 切片比对
+                    if dp[diff] and s[diff:j] == word:
+                        dp[j] = True
+                        break               # 完美剪枝
+        return dp[n]
+```
+
+---
+
+### 🛡️ 境界二：遍历分割点法 (官方标准哈希版)
+**思路**：内层不再遍历字典，而是把前半段 `0` 到 `j` 切一刀。如果前半段合法，且后半段存在于哈希表中，则当前长度合法。
+```python
+class Solution(object):
+    def wordBreak(self, s, wordDict):
+        word_set = set(wordDict) # 转哈希表加速查询
+        n = len(s)
+        dp = [False] * (n + 1)
+        dp[0] = True
+        
+        for i in range(1, n + 1):          # 外层：背包容量
+            for j in range(i):             # 内层：遍历分割点 j
+                # 前半段合法，且后半段切片在字典中
+                if dp[j] and s[j:i] in word_set:
+                    dp[i] = True
+                    break
+        return dp[n]
+```
+
+---
+
+### 👑 境界三：终极线性降维打击 (Max/Min Length 滑动窗口优化)
+**思路**：官方解法的致命缺陷在于，当 `i` 很大时，切分出来的后半段 `s[j:i]` 可能长达上百个字符，而字典里最长的单词可能只有 10 个字符！这种盲目的长切片完全是浪费 $O(L)$ 时间。
+**降维打击**：预先提取字典中单词的最大长度 `max_len` 和最小长度 `min_len`。内层切分点 `j` 只需要在这个极小的滑动窗口内遍历即可！
+
+```python
+class Solution(object):
+    def wordBreak(self, s, wordDict):
+        word_set = set(wordDict)
+        n = len(s)
+        dp = [False] * (n + 1)
+        dp[0] = True
+        
+        # 提取字典的最长和最短维度
+        max_len = max(len(w) for w in wordDict) if wordDict else 0
+        min_len = min(len(w) for w in wordDict) if wordDict else 0
+        
+        for i in range(1, n + 1):
+            # 🎯 极限视距：最多只往前看 max_len 的距离，最近只看 min_len
+            start = max(0, i - max_len)
+            end = i - min_len + 1
+            
+            for j in range(start, end):
+                if dp[j] and s[j:i] in word_set:
+                    dp[i] = True
+                    break
+        return dp[n]
+```
+
+---
+
+### 📊 139题 三种解法终极横向对比 (面试选型架构指南)
+
+假设字符串长度为 $N$，字典单词数为 $M$，单词平均/最大长度为 $L$。
+
+| 算法维度 | 我的解法 (遍历字典) | 官方解法 (遍历分割点) | 终极解法 (滑动窗口剪枝) |
+| :--- | :--- | :--- | :--- |
+| **内层逻辑** | 遍历每一个单词，看能否与词尾重合。 | 遍历每一个切割点，看后半段在不在字典里。 | 仅在 `[max_len]` 的极小合法窗口内切分验证。 |
+| **时间复杂度** | **$O(N \times M \times L)$** | **$O(N^2 \times L)$** | **$O(N \times \text{max\_len} \times L)$** |
+| **时间隐藏开销** | 切片与对比耗费 $O(L)$。 | 切片耗费 $O(L)$ + 算哈希值耗费 $O(L)$。 | 同官方，但触发次数呈断崖式下跌。 |
+| **空间复杂度** | **$O(N)$** | **$O(N + M \times L)$** | **$O(N + M \times L)$** |
+| **大厂选型场景** | 适合**字典极小，但字符串极长**的场景。无哈希表额外内存开销。 | 适合**字典极大，且字符串较短**的常规场景。 | **绝对的工业级最优解**。因为 `max_len` 是常数，时间复杂度被强行降维为真正的 **$O(N)$ 线性级别**！ |
+
+### 🏆 终极感悟
+这道题完美揭示了 Python 底层极度昂贵的 **$O(L)$ 切片代价**。
+在面试中，只要能清晰地说出：
+1. **排列背包导致必须外层容量**。
+2. **`and` 的短路求值屏蔽 $O(L)$ 切片**。
+3. **`max_len` 常数窗口把 $O(N^2)$ 降维到 $O(N)$**。
