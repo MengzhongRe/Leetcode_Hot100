@@ -258,3 +258,103 @@ class Solution(object):
 1. **排列背包导致必须外层容量**。
 2. **`and` 的短路求值屏蔽 $O(L)$ 切片**。
 3. **`max_len` 常数窗口把 $O(N^2)$ 降维到 $O(N)$**。
+
+
+## 📝 LeetCode 152. 乘积最大子数组 (Maximum Product Subarray)
+
+## 🏷️ 题目基本信息
+- **难度**：🟡 中等
+- **标签**：`数组`、`动态规划 (DP)`
+- **核心考点**：状态机的分类讨论、正负数符号反转特性
+
+---
+
+## 💡 核心解题思路
+
+这道题是「最大子数组和 (LC 53)」的变种。乘法和加法最大的不同在于：**负负得正**。
+
+如果像加法那样只维护一个“当前最大值”，会遇到致命问题：
+> 当前的最大值是正数，遇到负数时瞬间变成最小的负数；但如果下一个数字**还是负数**，这个最小的负数就会“逆袭”变成一个极大的正数！
+
+**🔑 破题关键：**
+除了记录当前连续子数组的 **最大乘积 (`cur_max`)**，我们还必须同时记录 **最小乘积 (`cur_min`)**。
+
+当你遍历到一个新的数字 `num` 时，新的极值必定在以下三者中产生：
+1. `num` 本身（意味着前面的乘积太拉垮，从自己开始重新计算子数组）
+2. `cur_max * num`
+3. `cur_min * num`（如果 `num` 是负数，这就是负负得正的逆袭点）
+
+---
+
+## 💻 Python 代码实现
+
+这里提供两种写法，推荐掌握 **写法二**，逻辑更加精炼优雅。
+
+### 写法一：常规动态规划（滚动变量）
+最直白的逻辑，把三种可能的值都算出来，取最大和最小。
+
+```python
+class Solution:
+    def maxProduct(self, nums: List[int]) -> int:
+        if not nums: return 0
+        
+        # 初始化：当前最大、当前最小、全局最大都是第一个元素
+        cur_max = cur_min = ans = nums[0]
+        
+        for num in nums[1:]:
+            # 注意：cur_max 更新后会被覆盖，所以必须先暂存旧的 cur_max
+            temp_max = cur_max 
+            
+            # 状态转移方程
+            cur_max = max(num, temp_max * num, cur_min * num)
+            cur_min = min(num, temp_max * num, cur_min * num)
+            
+            # 更新全局最大值
+            ans = max(ans, cur_max)
+            
+        return ans
+```
+
+### 写法二：极简交换法（🌟 强烈推荐）
+利用数学性质：**当遇到负数时，最大的数会变成最小的，最小的数会变成最大的。**
+因此，遇到负数时，直接交换 `cur_max` 和 `cur_min`，然后按照全是正数的逻辑处理即可。
+
+```python
+class Solution:
+    def maxProduct(self, nums: List[int]) -> int:
+        if not nums: return 0
+        
+        cur_max = cur_min = ans = nums[0]
+        
+        for num in nums[1:]:
+            # 遇到负数，最大变最小，最小变最大，直接交换
+            if num < 0:
+                cur_max, cur_min = cur_min, cur_max
+                
+            # 状态转移变得非常简单：要么自身起头，要么带上前缀乘积
+            cur_max = max(num, cur_max * num)
+            cur_min = min(num, cur_min * num)
+            
+            # 记录历史最高
+            ans = max(ans, cur_max)
+            
+        return ans
+```
+
+---
+
+## 📊 复杂度分析
+
+- **时间复杂度**：$\mathcal{O}(N)$。只需遍历数组一次，每次迭代执行常数次比较操作。
+- **空间复杂度**：$\mathcal{O}(1)$。仅仅使用了 `cur_max`、`cur_min`、`ans` 三个变量，将原本 $\mathcal{O}(N)$ 的 DP 数组用滚动变量优化了。
+
+---
+
+## ⚠️ 避坑指南 (Edge Cases)
+
+1. **含有 `0` 的情况**：
+   - 乘积遇到 `0` 会清零。代码中的 `max(num, cur_max * num)` 完美处理了这一点。当乘积为 0 时，如果下一个数是正数，`num` 就会大于 `0 * num`，子数组自动从新数字重新开始。
+2. **数组只有 1 个负数**：
+   - 如 `[-2]`，返回 `-2`，初始化为 `nums[0]` 可覆盖此边界条件。
+3. **忘记暂存旧变量**（针对写法一）：
+   - 在更新 `cur_max` 时，如果你直接写 `cur_max = ...`，下一行计算 `cur_min` 时用的就是**新的** `cur_max`，这会导致错误！必须用 `temp_max` 存一下（这也是为什么写法二更加优雅，因为规避了这个易错点）。
