@@ -187,3 +187,190 @@ class Solution(object):
 ### 📊 复杂度
 - **时间复杂度**：$O(M \times N)$，遍历整个地图。
 - **空间复杂度**：$O(N)$，仅使用一个长度为 $N$ 的一维数组，兼顾了极低内存与不污染原数据的优良工程习惯。
+
+
+
+# 📖 每日算法笔记：多维 DP 与空间极致压缩
+
+## 🔴 一、 LeetCode 5. 最长回文子串 (Medium)
+
+### 📌 题目核心
+**区间 DP 经典题**。判断一段字符串是否是回文，取决于它的“两头是否相等”以及“剥去两头后的内部子串是否是回文”。
+
+---
+
+### 💡 核心思路演进
+#### 1. 基础版：二维区间 DP
+*   **状态定义**：`dp[i][j]` 表示从索引 `i` 到 `j` 的子串是否为回文。
+*   **状态转移**：`dp[i][j] = (s[i] == s[j]) and dp[i+1][j-1]`。
+*   **⚠️ 致命考点（遍历顺序）**：因为计算 `dp[i][j]` 依赖于它**左下角**的数据 `dp[i+1][j-1]`。为了保证读到的旧数据已经算好，外层循环 `i` **必须倒序遍历**（从下往上），内层 `j` **正序遍历**（从左往右，且 `j > i`）。
+
+#### 2. 极限压缩版：一维滚动 DP
+*   **优化逻辑**：上一行的状态算完后，其实只有“正左方”的数据还有用，可以直接把 2D 数组压成 1D 的 `dp[j]`。
+*   **⚠️ 致命陷阱（状态残留与覆盖）**：
+    1.  **内层 `j` 必须倒序**：为了拿到没被污染的左下角旧数据。
+    2.  **必须擦除状态**：如果两头字符不相等 (`s[i] != s[j]`)，**必须显式地写 `dp[j] = False`**，否则它会继承上一轮循环留下的 `True`（脏数据），导致极其隐蔽的 Bug。
+
+#### 3. 降维打击版：中心扩展法（大厂最优解）
+*   **逻辑**：打破 DP 思维，利用回文的物理对称性。像石头落水一样，以每个字符（奇数中心）或两个字符的间隙（偶数中心）为起点，向外双指针扩展。这才是这道题空间 $O(1)$ 的真正满分解法。
+
+---
+
+### 💻 核心代码与复杂度对比
+
+**【1】二维 DP 版** (时间 $O(N^2)$，空间 $O(N^2)$)
+```python
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        n = len(s)
+        if n < 2: return s
+        dp = [[False] * n for _ in range(n)]
+        begin, max_len = 0, 1
+
+        # i 必须倒序，保证左下角的 dp[i+1][j-1] 已就绪
+        for i in range(n - 1, -1, -1):
+            for j in range(i, n):
+                if s[i] == s[j]:
+                    if j - i <= 2: dp[i][j] = True
+                    else: dp[i][j] = dp[i + 1][j - 1]
+                
+                if dp[i][j] and j - i + 1 > max_len:
+                    max_len, begin = j - i + 1, i
+        return s[begin : begin + max_len]
+```
+
+**【2】一维滚动版** (时间 $O(N^2)$，空间 $O(N)$)
+```python
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        n = len(s)
+        if n < 2: return s
+        dp = [False] * n
+        begin, max_len = 0, 1
+
+        for i in range(n - 1, -1, -1):
+            # j 也必须倒序，防止读取到本轮已被覆盖的错乱数据
+            for j in range(n - 1, i - 1, -1):
+                if s[i] == s[j]:
+                    if j - i <= 2: dp[j] = True
+                    else: dp[j] = dp[j - 1]
+                else:
+                    # 极其重要：强制擦除上一轮的残留状态
+                    dp[j] = False
+                    
+                if dp[j] and j - i + 1 > max_len:
+                    max_len, begin = j - i + 1, i
+        return s[begin : begin + max_len]
+```
+
+**【3】中心扩展法** (时间 $O(N^2)$，**空间 $O(1)$ 最优**)
+```python
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        def expand(left, right):
+            while left >= 0 and right < len(s) and s[left] == s[right]:
+                left -= 1
+                right += 1
+            # 退出时多走了一步，复原起点和长度
+            return left + 1, right - left - 1
+
+        begin, max_len = 0, 0
+        for i in range(len(s)):
+            l1, len1 = expand(i, i)       # 奇数中心
+            l2, len2 = expand(i, i + 1)   # 偶数中心
+            
+            if len1 > max_len: begin, max_len = l1, len1
+            if len2 > max_len: begin, max_len = l2, len2
+                
+        return s[begin : begin + max_len]
+```
+
+***
+
+## 🟡 二、 LeetCode 1143. 最长公共子序列 (Medium)
+
+### 📌 题目核心
+**双序列 DP 鼻祖题**。两个指针分别遍历两个字符串，对比字符是否相等。重点技巧是开辟 `(m+1) * (n+1)` 大小的数组来做 **补零偏移 (Padding)**，完美处理空字符串边界。
+
+---
+
+### 💡 空间优化的“三级跳” (2D -> 两行 -> 1D)
+
+#### 1. 基础版：二维 DP
+*   **状态依赖**：如果相等，依赖**左上角** `dp[i-1][j-1] + 1`；如果不等，依赖**正上方与正左方** `max(dp[i-1][j], dp[i][j-1])`。
+
+#### 2. 进阶版：双行滚动 (Two-Row)
+*   **逻辑**：由于当前行 (`curr`) 只依赖上一行 (`prev`)，我们可以只开两行数组。
+*   **极致优化**：内层循环强制绑定**较短**的字符串，极度节省内存。换行时绝不申请新内存，直接使用 **$O(1)$ 指针交换** (`prev, curr = curr, prev`)。
+
+#### 3. 终极版：一维数组带 `temp` 传递
+*   **逻辑**：只用一行数组。最大的痛点在于**左上角数据会被覆盖**（算 `j` 的时候，上一轮的 `dp[j-1]` 已经被改成新值了）。
+*   **破局法**：在每行首记录 `left_up = dp[0]`。在覆盖 `dp[j]` 之前，先将其（即正上方数据）用 `next_left_up` 暂存下来；计算完成后，将其赋值给 `left_up` 传给下一轮当“左上角”。
+
+---
+
+### 💻 核心代码与复杂度对比
+
+**【1】二维 DP 版** (时间 $O(M \times N)$，空间 $O(M \times N)$)
+```python
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        m, n = len(text1), len(text2)
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if text1[i - 1] == text2[j - 1]:
+                    dp[i][j] = dp[i - 1][j - 1] + 1
+                else:
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+        return dp[-1][-1]
+```
+
+**【2】双行滚动版** (时间 $O(M \times N)$，空间 $O(\min(M,N))$)
+```python
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        if len(text1) < len(text2): text1, text2 = text2, text1
+        m, n = len(text1), len(text2)
+        
+        prev, curr = [0] * (n + 1), [0] * (n + 1)
+        
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if text1[i - 1] == text2[j - 1]:
+                    curr[j] = prev[j - 1] + 1
+                else:
+                    curr[j] = max(prev[j], curr[j - 1])
+            # $O(1)$ 指针交换，环保且极速
+            prev, curr = curr, prev
+            
+        # 注意：最后结果因为多交换了一次，停留在了 prev 中！
+        return prev[-1]
+```
+
+**【3】一维滚动版 (带左上角暂存)** (时间 $O(M \times N)$，空间 $O(\min(M,N))$)
+```python
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        if len(text1) < len(text2): text1, text2 = text2, text1
+        m, n = len(text1), len(text2)
+        dp = [0] * (n + 1)
+        
+        for i in range(1, m + 1):
+            # 每开启新一行，获取最本源的左上角 (通常为0)
+            left_up = dp[0] 
+            for j in range(1, n + 1):
+                # 覆盖前，暂存当前位置的旧值（对下一格来说它就是左上角）
+                next_left_up = dp[j] 
+                
+                if text1[i - 1] == text2[j - 1]:
+                    dp[j] = left_up + 1
+                else:
+                    dp[j] = max(dp[j], dp[j - 1])
+                    
+                # 完美接力传递
+                left_up = next_left_up 
+                
+        return dp[-1]
+```
